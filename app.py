@@ -135,6 +135,15 @@ ul[data-baseweb="menu"] li, ul[role="listbox"] li {
 .admin-locked { background: #FAEEDA; border: 0.5px solid #EF9F27; border-radius: 12px; padding: 16px; margin: 12px 16px; }
 .admin-title { font-size: 14px; font-weight: 600; color: #633806; margin-bottom: 4px; }
 .admin-sub { font-size: 12px; color: #633806; margin-bottom: 12px; }
+[data-testid="stTextArea"] textarea {
+    border-radius: 10px !important; border-color: #D6EDD9 !important; background: #F5FAF6 !important;
+    color: #0F2D1A !important; font-size: 12px !important;
+}
+[data-testid="stTextArea"] label {
+    font-size: 10px !important; font-weight: 600 !important; color: #6B8F72 !important;
+    text-transform: uppercase !important; letter-spacing: 0.05em !important;
+}
+.comment-wrap { margin: -4px 16px 10px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -173,13 +182,14 @@ def carregar_historico():
             if not c.get("ID_Conferencia"):
                 continue
             respostas = {r["Nome_Item"]: r["Status_C_NC_NA"] for r in resp_rows if r.get("ID_Conferencia") == c["ID_Conferencia"]}
+            comentarios = {r["Nome_Item"]: r.get("Comentario", "") for r in resp_rows if r.get("ID_Conferencia") == c["ID_Conferencia"]}
             total_c = sum(1 for v in respostas.values() if v == "C")
             total_nc = sum(1 for v in respostas.values() if v == "NC")
             total_na = sum(1 for v in respostas.values() if v == "NA")
             total = total_c + total_nc
             historico.append({
                 "local": c.get("Local", ""), "nutricionista": c.get("Nutricionista", ""),
-                "data": str(c.get("Data", "")), "respostas": respostas,
+                "data": str(c.get("Data", "")), "respostas": respostas, "comentarios": comentarios,
                 "total_c": total_c, "total_nc": total_nc, "total_na": total_na,
                 "pct": int((total_c / total) * 100) if total else 0,
                 "id": c["ID_Conferencia"],
@@ -188,9 +198,10 @@ def carregar_historico():
     except:
         return [], False
 
-def salvar_conferencia(conf, respostas):
+def salvar_conferencia(conf, respostas, comentarios=None):
     try:
         import uuid
+        comentarios = comentarios or {}
         sh = get_client().open(SHEET_NAME)
         ws_conf = sh.worksheet("Conferências")
         ws_resp = sh.worksheet("Respostas")
@@ -203,7 +214,7 @@ def salvar_conferencia(conf, respostas):
         pct = int((total_c / total_avaliado) * 100) if total_avaliado else 0
         ws_conf.append_row([conf_id, conf["data"], conf["local"], "", conf["nutricionista"],
                              "Finalizada", total_itens, total_c, total_nc, total_na, f"{pct}%", ""])
-        ws_resp.append_rows([[f"RS{conf_id}{i:03d}", conf_id, "", v, "", it, conf["local"]]
+        ws_resp.append_rows([[f"RS{conf_id}{i:03d}", conf_id, "", v, comentarios.get(it, ""), it, conf["local"]]
                               for i, (it, v) in enumerate(respostas.items())])
         carregar_historico.clear()
         return True, conf_id
@@ -413,7 +424,7 @@ TODOS_ITENS = [item for _, itens in CATEGORIAS for item in itens]
 LOCAIS = ["R1", "R2", "R3", "R5", "Sala VIP"]
 
 # ── Session state ─────────────────────────────────────────────
-for k, v in [("tela", "splash"), ("respostas", {}), ("conf", {}), ("nutricionista", "Nutricionista"),
+for k, v in [("tela", "splash"), ("respostas", {}), ("comentarios", {}), ("conf", {}), ("nutricionista", "Nutricionista"),
              ("historico_loaded", False), ("admin_ok", False), ("confirm_wipe_all", False)]:
     if k not in st.session_state:
         st.session_state[k] = v
@@ -524,6 +535,7 @@ if st.session_state.tela == "inicio":
                 st.session_state.conf = {"local": local, "nutricionista": nutricionista, "data": str(data_conf), "itens": TODOS_ITENS}
                 st.session_state.nutricionista = nutricionista
                 st.session_state.respostas = {it: None for it in TODOS_ITENS}
+                st.session_state.comentarios = {it: "" for it in TODOS_ITENS}
                 st.session_state.tela = "conferencia"
                 st.rerun()
 
@@ -536,7 +548,13 @@ if st.session_state.tela == "inicio":
             st.markdown('<div class="section-lbl">Conferências realizadas</div>', unsafe_allow_html=True)
             for h in reversed(hist):
                 nc_list = [it for it, v in h["respostas"].items() if v == "NC"]
-                ncs_html = "".join([f'<div style="font-size:11px;color:#9C0006;margin-top:2px;">• {n}</div>' for n in nc_list])
+                h_coment = h.get("comentarios", {})
+                ncs_html = "".join([
+                    f'<div style="font-size:11px;color:#9C0006;margin-top:2px;">• {n}'
+                    + (f' — 💬 {h_coment.get(n)}' if h_coment.get(n) else '')
+                    + '</div>'
+                    for n in nc_list
+                ])
                 hist_html = (
                     '<div class="hist-card">'
                     '<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
@@ -588,7 +606,15 @@ if st.session_state.tela == "inicio":
         else:
             st.markdown(f'<div class="section-lbl">{len(ncs)} não conformidade(s)</div>', unsafe_allow_html=True)
             for h, it in ncs:
-                st.markdown(f'<div class="nc-card"><div><div class="nc-name">{it}</div><div class="nc-meta">{h["local"]} · {h["data"]}</div></div><span class="badge badge-nc">NC</span></div>', unsafe_allow_html=True)
+                coment_it = h.get("comentarios", {}).get(it, "")
+                coment_html = f'<div style="font-size:12px;color:#6B2020;margin-top:6px;background:#fff;border-radius:8px;padding:6px 8px;">💬 {coment_it}</div>' if coment_it else ""
+                st.markdown(
+                    f'<div class="nc-card" style="flex-direction:column;align-items:stretch;">'
+                    f'<div style="display:flex;align-items:center;justify-content:space-between;">'
+                    f'<div><div class="nc-name">{it}</div><div class="nc-meta">{h["local"]} · {h["data"]}</div></div>'
+                    f'<span class="badge badge-nc">NC</span></div>'
+                    f'{coment_html}'
+                    f'</div>', unsafe_allow_html=True)
 
     # ── TAB 4: RELATÓRIO ──────────────────────────────────────
     with tab4:
@@ -854,10 +880,25 @@ elif st.session_state.tela == "conferencia":
                         st.session_state.respostas[item] = "NA"
                         st.rerun()
 
+            st.markdown('<div class="comment-wrap">', unsafe_allow_html=True)
+            comentario_val = st.text_area(
+                "Comentário (opcional)",
+                value=st.session_state.comentarios.get(item, ""),
+                key=f"com_{safe_key}",
+                placeholder="Adicione uma observação, se necessário...",
+                height=68,
+            )
+            st.session_state.comentarios[item] = comentario_val
+            st.markdown("</div>", unsafe_allow_html=True)
+
     st.markdown('<div class="div"></div>', unsafe_allow_html=True)
     if total_nc > 0 or total_c > 0:
+        coment = st.session_state.comentarios
         c_txt = "\n".join([f"• {it}" for it, v in resp.items() if v == "C"])
-        nc_txt = "\n".join([f"• {it}" for it, v in resp.items() if v == "NC"])
+        nc_txt = "\n".join([
+            f"• {it}" + (f"\n   💬 {coment[it]}" if coment.get(it, "").strip() else "")
+            for it, v in resp.items() if v == "NC"
+        ])
         msg = (f"🔍 *Relatório — Genba Log*\n📍 {conf['local']}\n📅 {conf['data']}\n"
                f"👩‍⚕️ Nutricionista: {conf['nutricionista']}\n\n"
                f"✅ *Conformes:*\n{c_txt if c_txt else '—'}\n\n"
@@ -871,9 +912,9 @@ elif st.session_state.tela == "conferencia":
         with st.container(key="kgreen_finalizar"):
             if st.button("✓ Finalizar", use_container_width=True):
                 with st.spinner("Salvando no Google Sheets..."):
-                    ok, result = salvar_conferencia(conf, resp)
+                    ok, result = salvar_conferencia(conf, resp, st.session_state.comentarios)
                 if ok:
-                    st.session_state.historico.append({**conf, "respostas": dict(resp), "total_c": total_c, "total_nc": total_nc, "total_na": total_na, "pct": pct, "id": result})
+                    st.session_state.historico.append({**conf, "respostas": dict(resp), "comentarios": dict(st.session_state.comentarios), "total_c": total_c, "total_nc": total_nc, "total_na": total_na, "pct": pct, "id": result})
                     st.session_state.tela = "inicio"
                     st.rerun()
                 else:
