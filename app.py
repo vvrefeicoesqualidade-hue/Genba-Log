@@ -5,7 +5,7 @@ import base64
 from datetime import date, datetime, timedelta
 
 st.set_page_config(
-    page_title="Genba Diário",
+    page_title="Genba Log",
     page_icon="🌿",
     layout="centered",
     initial_sidebar_state="collapsed"
@@ -472,7 +472,7 @@ div[data-testid="stVerticalBlock"] .stButton { padding: 0 28px; position: relati
     <div class="splash-brand-name">VV Refeições</div>
     <div class="splash-brand-sub">A refeição caseira da sua empresa</div>
     <div class="splash-divider"></div>
-    <div class="splash-title">Genba Diário</div>
+    <div class="splash-title">Genba Log</div>
     <div class="splash-sub">Qualidade baseada em dados.</div>
 </div>""", unsafe_allow_html=True)
     if st.button("▶  Entrar", key="btn_entrar", use_container_width=True):
@@ -497,7 +497,7 @@ if not st.session_state.historico_loaded:
 # ── TOP BAR ───────────────────────────────────────────────────
 st.markdown(f"""
 <div class="topbar">
-    <div class="topbar-brand">Genba <span>Diário</span></div>
+    <div class="topbar-brand">Genba <span>Log</span></div>
     <div class="topbar-user">👤 {st.session_state.nutricionista}</div>
 </div>""", unsafe_allow_html=True)
 
@@ -726,7 +726,7 @@ if st.session_state.tela == "inicio":
             local_rows = "".join([f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;"><div style="width:100px;font-size:13px;">{l}</div><div style="flex:1;height:16px;background:#F0F4F1;border-radius:99px;overflow:hidden;"><div style="height:100%;background:{"#1D9E75" if int(p)>=80 else "#E24B4A"};width:{int(p)}%;border-radius:99px;"></div></div><div style="width:40px;text-align:right;font-size:13px;font-weight:700;">{int(p)}%</div></div>' for l, p in por_local.items()])
             mes_rows = "".join([f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;"><div style="width:100px;font-size:13px;">{meses[m-1]}</div><div style="flex:1;height:16px;background:#F0F4F1;border-radius:99px;overflow:hidden;"><div style="height:100%;background:{"#1D9E75" if int(por_mes[m])>=80 else "#E24B4A"};width:{int(por_mes[m])}%;border-radius:99px;"></div></div><div style="width:40px;text-align:right;font-size:13px;font-weight:700;">{int(por_mes[m])}%</div></div>' for m in range(1, 13) if m in por_mes.index])
             rank_rows = "".join([f'<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid #EEF4EF;"><span>{idx}. {l}</span><strong style="color:{"#9C0006" if ncv>0 else "#1D6B35"}">{ncv} NC</strong></div>' for idx, (l, ncv) in enumerate(rank_local_ano.items(), 1)])
-            html_rel = f"""<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{{font-family:Arial,sans-serif;max-width:800px;margin:0 auto;padding:40px;color:#0F2D1A;}}h1{{color:#0F2D1A;border-bottom:3px solid #7DC65A;padding-bottom:10px;}}h2{{color:#1D6B35;margin-top:30px;}}.cr{{display:flex;gap:20px;margin:20px 0;}}.ch{{flex:1;background:#EAF5ED;border-radius:10px;padding:16px;text-align:center;}}.cv{{font-size:32px;font-weight:700;}}.cl{{font-size:12px;color:#6B8F72;text-transform:uppercase;}}.footer{{margin-top:40px;padding-top:20px;border-top:1px solid #D6EDD9;font-size:12px;color:#6B8F72;}}</style></head><body><h1>Genba Diário — Relatório Anual {ano_sel}</h1><p>Gerado em {datetime.today().strftime('%d/%m/%Y')}</p><div class="cr"><div class="ch"><div class="cv">{tc}</div><div class="cl">Conferências</div></div><div class="ch"><div class="cv">{mp}%</div><div class="cl">Conformidade</div></div><div class="ch" style="background:#FFF0F0"><div class="cv" style="color:#9C0006">{tnc}</div><div class="cl">NCs</div></div></div><h2>Por Unidade</h2>{local_rows}<h2>Por Mês</h2>{mes_rows}<h2>Ranking de Unidades por NCs</h2>{rank_rows}<h2>Top NCs</h2>{nc_rows}<div class="footer">Genba Diário | Checklist de higiene e segurança dos alimentos.</div></body></html>"""
+            html_rel = f"""<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{{font-family:Arial,sans-serif;max-width:800px;margin:0 auto;padding:40px;color:#0F2D1A;}}h1{{color:#0F2D1A;border-bottom:3px solid #7DC65A;padding-bottom:10px;}}h2{{color:#1D6B35;margin-top:30px;}}.cr{{display:flex;gap:20px;margin:20px 0;}}.ch{{flex:1;background:#EAF5ED;border-radius:10px;padding:16px;text-align:center;}}.cv{{font-size:32px;font-weight:700;}}.cl{{font-size:12px;color:#6B8F72;text-transform:uppercase;}}.footer{{margin-top:40px;padding-top:20px;border-top:1px solid #D6EDD9;font-size:12px;color:#6B8F72;}}</style></head><body><h1>Genba Log — Relatório Anual {ano_sel}</h1><p>Gerado em {datetime.today().strftime('%d/%m/%Y')}</p><div class="cr"><div class="ch"><div class="cv">{tc}</div><div class="cl">Conferências</div></div><div class="ch"><div class="cv">{mp}%</div><div class="cl">Conformidade</div></div><div class="ch" style="background:#FFF0F0"><div class="cv" style="color:#9C0006">{tnc}</div><div class="cl">NCs</div></div></div><h2>Por Unidade</h2>{local_rows}<h2>Por Mês</h2>{mes_rows}<h2>Ranking de Unidades por NCs</h2>{rank_rows}<h2>Top NCs</h2>{nc_rows}<div class="footer">Genba Log | Checklist de higiene e segurança dos alimentos.</div></body></html>"""
             b64 = base64.b64encode(html_rel.encode()).decode()
             st.markdown(f'<a href="data:text/html;base64,{b64}" download="Relatorio_Anual_{ano_sel}.html" style="display:block;background:#0F2D1A;color:#7DC65A;border-radius:12px;padding:13px;text-align:center;font-size:13px;font-weight:700;text-decoration:none;margin:12px 16px;">⬇ Baixar relatório {ano_sel}</a>', unsafe_allow_html=True)
             st.markdown("<div style='height:32px'></div>", unsafe_allow_html=True)
@@ -858,7 +858,7 @@ elif st.session_state.tela == "conferencia":
     if total_nc > 0 or total_c > 0:
         c_txt = "\n".join([f"• {it}" for it, v in resp.items() if v == "C"])
         nc_txt = "\n".join([f"• {it}" for it, v in resp.items() if v == "NC"])
-        msg = (f"🔍 *Relatório — Genba Diário*\n📍 {conf['local']}\n📅 {conf['data']}\n"
+        msg = (f"🔍 *Relatório — Genba Log*\n📍 {conf['local']}\n📅 {conf['data']}\n"
                f"👩‍⚕️ Nutricionista: {conf['nutricionista']}\n\n"
                f"✅ *Conformes:*\n{c_txt if c_txt else '—'}\n\n"
                f"❌ *Não Conformes:*\n{nc_txt if nc_txt else '—'}\n\n"
